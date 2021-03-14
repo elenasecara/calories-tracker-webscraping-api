@@ -3,44 +3,41 @@ const request = require('request');
 const cheerio = require('cheerio');
 const app = express();
 
-const nutrition = []
-var myFCalls = 0;
+var nutrition = []
+var myFunc = 0
 
 app.get('/', function(req, res) {
-    myFCalls++
+    myFunc++
+    console.log("myFunc: " + myFunc)
+
     // the scraping magic will happen here
+    let title = req.query.title
     let recipeName = req.query.recipeName
     let carbsValue = req.query.carbsValue
 
-    let url = 'https://www.bbcgoodfood.com/recipes/' + recipeName
+    let url = 'https://www.bbcgoodfood.com/recipes/' + recipeName.replace(/\s+/g, '-').toLowerCase()
     console.log(url)
-    console.log('The function has been called: ' + myFCalls)
 
     var $;
     request(url, function(error, response, html) {
         if (!error) {
             $ = cheerio.load(html)
-            var prediction = $('div.header__body > h1.header__title').text()
+            title = $('div.post-header__body > h1.post-header__title').text()
             carbsValue = $('tbody.key-value-blocks__batch > tr.key-value-blocks__item')
 
             carbsValue.each(function() {
                 const ntr = $(this).find('td.key-value-blocks__value').text();
                 nutrition.push(ntr)
+                if(nutrition.length > 8){
+                    nutrition = []
+                    nutrition.push(ntr)
+                }
             })
 
             var json = {
                 id: 0,
-                // prediction: prediction,
-                nutritions: [
-                    { calories: nutrition[0] },
-                    { fat: nutrition[1] },
-                    { saturates: nutrition[2] },
-                    { carbs: nutrition[3] },
-                    { sugars: nutrition[4] },
-                    { fibre: nutrition[5] },
-                    { protein: nutrition[6] },
-                    { salt: nutrition[7] }
-                ]
+                title: title,
+                nutritions: nutrition
             }
 
             res.send(json)
@@ -49,7 +46,7 @@ app.get('/', function(req, res) {
 })
 
 app.listen('8000')
-console.log('API is running on: http://localhost:8000')
+console.log('API is running on: http://localhost:8000/?recipeName=flat-apple-vanilla-tart')
 
 
 module.exports = app
