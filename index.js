@@ -5,18 +5,12 @@ const app = express();
 
 var nutrition = []
 var titlesArray = []
-var myFunc = 0
 
+// get food category -- based on general searching
 app.get('/', function(req, res) {
-    myFunc++
-    console.log("myFunc: " + myFunc)
-
     // the scraping magic will happen here
-    let title = req.query.title
     let recipeName = req.query.recipeName
-    let carbsValue = req.query.carbsValue
     let mainTitle = req.query.mainTitle
-    let link = req.query.link
 
     let url = 'https://www.bbcgoodfood.com/search/recipes?q=' + recipeName.replace(/\s+/g, '-').toLowerCase()
 
@@ -24,10 +18,7 @@ app.get('/', function(req, res) {
     request(url, function(error, response, html) {
         if (!error) {
             $ = cheerio.load(html)
-            title = $('div.post-header__body > h1.post-header__title').text()
-            carbsValue = $('tbody.key-value-blocks__batch > tr.key-value-blocks__item')
-            link = $('a.standard-card-new__article-title').attr('href')
-            console.log("link: " + link)
+
             mainTitle = $('h4.standard-card-new__display-title')
             mainTitle.each(function() {
                 const titles = $(this).find('a.standard-card-new__article-title').text()
@@ -42,6 +33,32 @@ app.get('/', function(req, res) {
                 // check when to rewrite in the array
             })
 
+            var json = {
+                allTitles: titlesArray,
+                id: 0
+            }
+
+            res.send(json)
+        }
+    })
+})
+
+
+// get recipe and nutrients -- based on specific searching
+app.get('/nutrients/', function(req, res) {
+    // the scraping magic will happen here
+    let title = req.query.title
+    let recipeName = req.query.recipeName
+    let carbsValue = req.query.carbsValue
+
+    let url = 'https://www.bbcgoodfood.com/recipes/' + recipeName.replace(/\s+/g, '-').toLowerCase()
+
+    var $;
+    request(url, function(error, response, html) {
+        if (!error) {
+            $ = cheerio.load(html)
+            title = $('div.post-header__body > h1.post-header__title').text()
+            carbsValue = $('tbody.key-value-blocks__batch > tr.key-value-blocks__item')
             carbsValue.each(function() {
                 const ntr = $(this).find('td.key-value-blocks__value').text();
                 nutrition.push(ntr)
@@ -52,8 +69,7 @@ app.get('/', function(req, res) {
             })
 
             var json = {
-                allTitles: titlesArray,
-                id: 0,
+                id: 1,
                 title: title,
                 nutritions: nutrition
             }
@@ -62,9 +78,8 @@ app.get('/', function(req, res) {
         }
     })
 })
-
 app.listen('8000')
 console.log('API is running on: http://localhost:8000/?recipeName=cupcakes')
-
+console.log('API is running on: http://localhost:8000/nutrients/?recipeName=cupcakes')
 
 module.exports = app
